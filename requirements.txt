@@ -1,0 +1,8 @@
+numpy
+pandas
+torch
+scikit-learn
+seaborn
+matplotlib
+tensorboard
+emoji==1.4.1
