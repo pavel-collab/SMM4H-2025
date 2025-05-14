@@ -7,3 +7,4 @@ matplotlib
 tensorboard
 emoji==1.4.1
 accelerate==0.27.2
+transformers==4.38.0

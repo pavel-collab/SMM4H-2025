@@ -3,14 +3,13 @@ from utils.constants import *
 from utils.utils import (fix_random_seed,
                          get_device,
                          get_train_eval_dataset,
-                         print_device_info)
+                         print_device_info,
+                         compute_metrics)
 from transformers import (AutoTokenizer, 
                           AutoModelForSequenceClassification,
                           Trainer, 
                           TrainingArguments)
-from sklearn.model_selection import StratifiedKFold
-import numpy as np
-from torch.utils.data import Dataset
+from models.custom_trainer import CustomTrainer
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_name', type=str, default='bert-base-uncased', help='set backbone model name')
@@ -23,7 +22,7 @@ fix_random_seed()
 device = get_device()
 
 train_dataset, eval_dataset = get_train_eval_dataset(use_generation=False,
-                            get_class_weight_flag=False)
+                                                     get_class_weight_flag=True)
 
 texts = train_dataset['text']
 labels = train_dataset['label']
@@ -59,11 +58,21 @@ try:
             gradient_accumulation_steps=2
         )
     
-    trainer = Trainer(
+    # trainer = Trainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=tokenized_train_dataset,
+    #     eval_dataset=tokenized_val_dataset,
+    #     compute_metrics=compute_metrics
+    # )
+    
+    trainer = CustomTrainer(
         model=model,
         args=training_args,
         train_dataset=tokenized_train_dataset,
-        eval_dataset=tokenized_val_dataset
+        eval_dataset=tokenized_val_dataset,
+        compute_metrics=compute_metrics,
+        class_weights=clw.class_weights.to(device)
     )
     
     try:
