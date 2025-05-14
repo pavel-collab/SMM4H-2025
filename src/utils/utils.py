@@ -51,11 +51,11 @@ def get_train_eval_dataset(use_generation=False, get_class_weight_flag=False):
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
     
-    # if use_generation:
-    #     generated_df = pd.read_csv(generated_csv_file)
-    #     generated_df = generated_df.rename(columns={'Question': 'text'})
+    if use_generation:
+        generated_df = pd.read_csv(generated_csv_file)
+        generated_df = generated_df.rename(columns={'Question': 'text'})
 
-    #     train_df = pd.concat([train_df, generated_df], ignore_index=True)
+        train_df = pd.concat([train_df, generated_df], ignore_index=True)
     
     train_dataset = Dataset.from_pandas(train_df)
     val_dataset = Dataset.from_pandas(val_df)
