@@ -9,6 +9,8 @@ from sklearn.metrics import (accuracy_score,
 from sklearn.model_selection import train_test_split
 import pandas as pd
 from datasets import Dataset
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def compute_metrics(eval_preds):
     logits, labels = eval_preds
@@ -73,3 +75,44 @@ def print_device_info():
 def get_device():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     return device
+
+def evaleate_model(model, trainer, tokenized_val_dataset, device):
+    model.to(device)
+    model.eval()
+    predictions = trainer.predict(tokenized_val_dataset)
+    
+    #! in some models predictions.predictions is a complex tupple, not a numpy array 
+    if isinstance(predictions.predictions, tuple):
+        target_predictions = predictions.predictions[0]
+    else:
+        target_predictions = predictions.predictions
+    
+    preds = np.argmax(target_predictions, axis=-1)
+    true_lables = tokenized_val_dataset['label']
+    cm = confusion_matrix(true_lables, preds)
+    report = classification_report(true_lables, preds)
+    accuracy = np.sum(np.diag(cm)) / np.sum(cm)
+    # Вычисление взвешенной F1-меры для текущей модели
+    micro_f1 = f1_score(true_lables, preds, average='micro')
+    return cm, report, accuracy, micro_f1
+
+def plot_confusion_matrix(cm, classes, model_name=None, save_file_path=None):
+    with plt.style.context('default'):  
+        plt.figure(figsize=(5, 4))
+        sns.heatmap(cm, annot=True, fmt='g', cmap='Blues', cbar=False,
+                    xticklabels=classes, yticklabels=classes)
+        plt.xlabel('Predicted labels')
+        plt.ylabel('True labels')
+        if model_name:
+            assert save_file_path is not None
+            plt.title(f"Confusion Matrix for {model_name}")
+        else:
+            plt.title("Confusion Matrix")
+        
+        if save_file_path is None:
+            plt.show()
+        else:
+            # Verify that model_name exists before saving
+            assert model_name, "model_name must be provided when save_file_path is not None"
+            plt.savefig(f"{save_file_path}/confusion_matrix_{model_name}.jpg")
+            return f"{save_file_path}/confusion_matrix_{model_name}.jpg"

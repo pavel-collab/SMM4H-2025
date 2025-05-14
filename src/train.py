@@ -22,7 +22,7 @@ model_name = args.model_name
 fix_random_seed()
 device = get_device()
 
-train_dataset, eval_dataset = get_train_eval_dataset(use_generation=args.use_generation,
+train_dataset, eval_dataset = get_train_eval_dataset(use_generation=False,
                             get_class_weight_flag=False)
 
 texts = train_dataset['text']
@@ -70,6 +70,8 @@ try:
         trainer.train()
     except Exception as ex:
         print(f"[ERROR] with training {model_name}: {ex}")
+        
+    tokenizer.save_pretrained(f"./results/{model_name.replace('/', '-')}_results/tokenizer")
         
 except KeyboardInterrupt:
     print(f"[STOP] training with keyboard interrupt")
