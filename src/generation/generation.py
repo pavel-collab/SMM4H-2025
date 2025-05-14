@@ -13,6 +13,8 @@ parser.add_argument('-p', '--pipeline', action='store_true', help='use raw pipel
 parser.add_argument('-m', '--model_path', help='set a path to the model that we want to evaluate')
 parser.add_argument('-n', '--n_samples', type=int, default=10, help='number of generated samples')
 parser.add_argument('-o', '--output_path', type=str, default='./data/', help='path to directory where we will save output file with generated data')
+
+parser.add_argument('--debug', action='store_true', help='flag for developers to inspect what examples are generted before put it into classifier')
 args = parser.parse_args()
 
 # Загружаем LLM
@@ -28,8 +30,6 @@ llm = LLM(model='Qwen/Qwen2.5-0.5B-Instruct',
 #           gpu_memory_utilization=0.9,
 #           max_num_seqs=128,
 #           max_model_len=2048)
-
-target_label = args.target_label
 n_samples = args.n_samples
 
 # Промпт с уточнением стиля
@@ -51,6 +51,11 @@ for output in tqdm(outputs[0].outputs):
     #TODO полная строка генерации outputs[0].outputs[0] -- разобраться что значат эти индексы
     #TODO в генерациях остаются артефакты генерации в начале предложения, придумать, как убрать их
     generated = output.text.strip()
+    
+    if args.debug:
+        cleaned_generation = generated.replace(',', '').replace('\n', ' ')
+        with open('debug.txt', 'a') as debug_file:
+            debug_file.write(f"{cleaned_generation}\n\n")
 
     # освободим память перед применением новой нейронки
     gc.collect()
@@ -88,7 +93,7 @@ for output in tqdm(outputs[0].outputs):
     result = result_lable.detach().item()
         
     output_file_path = Path(args.output_path)
-    output_file = Path(f"{output_file_path.absolute()}/{target_label.replace(' ', '-')}_generated_samples.csv")
+    output_file = Path(f"{output_file_path.absolute()}/generated_samples.csv")
     file_create = output_file.exists()
 
     if result == 1 and score > 0.7:
@@ -97,7 +102,7 @@ for output in tqdm(outputs[0].outputs):
         
         with open(output_file.absolute(), 'a') as fd:
             if not file_create:
-                fd.write("Question,label\n")
+                fd.write("text,label\n")
             fd.write(f"{cleaned_generation},{result_lable.detach().item()}\n")
         accepted_samples_number += 1
 
