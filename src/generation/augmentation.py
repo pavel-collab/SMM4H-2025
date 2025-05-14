@@ -26,9 +26,10 @@ def main():
 
     df = pd.read_csv(data_path.absolute())
 
+    accepted_sample_num = 0
     for idx, row in df.iterrows():
-        if idx == args.n_samples:
-            break
+        if row['label'] != 1:
+            continue 
         
         outputs = paraphraser(prompt.format(text = row['text']), 
                             max_length=128, 
@@ -50,8 +51,12 @@ def main():
             
             with open(output_file.absolute(), 'a') as fd:
                 if not file_create:
-                    fd.write("Question,label\n")
+                    fd.write("text,label\n")
                 fd.write(f"{cleaned_generation},1\n")
+
+        accepted_sample_num += 1
+        if accepted_sample_num == args.n_samples:
+            break
         
 if __name__ == '__main__':
     main()
