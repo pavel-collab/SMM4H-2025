@@ -46,7 +46,8 @@ if __name__ == "__main__":
     
     df = pd.read_csv(data_path.absolute())
     
-    texts = df[df['language'] == lang].to_list()
+    filtred_df = df[(df['language'] == lang) & (df['label'] == 1)]
+    texts = filtred_df['text'].tolist()
     texts_by_lang = {
         lang: texts
     }
