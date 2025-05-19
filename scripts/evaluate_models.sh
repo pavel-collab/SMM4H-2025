@@ -50,7 +50,7 @@ for dir in ./results/*; do
         fi
 
         echo "Evaluate $model_name"
-        python3 ./src/evaluate_model.py -m $model_path -o $csv_file
+        python3 ./src/evaluate.py -m $model_path -o $csv_file
     done
 done
 

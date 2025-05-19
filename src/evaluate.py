@@ -52,11 +52,18 @@ baseline_trainer = Trainer(
 
 try:
     print(f"EVALUATE MODEL {model_name}")
-    cm, validation_report, accuracy, micro_f1 = evaleate_model(model, baseline_trainer, tokenized_val_dataset, device)
-    print("Metrics for current model:")
-    print(f'Test accuracy: {accuracy:.4f}')
-    print(validation_report)
-    print(f'Test F1 micro: {micro_f1:.4f}')
+    #TODO: need refactor
+    cm, validation_accuracy, validation_precision, validation_recall, validation_f1_micro, validation_f1_macro = evaleate_model(model, baseline_trainer, tokenized_val_dataset, device)
+    
+    print(f"METRICS FOR THIS MODEL:\n")
+    print(
+        f"Accuracy: {validation_accuracy}\n",
+        f"Precision: {validation_precision}\n",
+        f"Recall: {validation_recall}\n",
+        f"F1 micro: {validation_f1_micro}\n",
+        f"F1 macro: {validation_f1_macro}\n"
+    )
+    
     plot_confusion_matrix(cm, classes=range(n_classes), model_name=model_name, save_file_path='./images')
     
     if output_file_path is not None:
@@ -65,6 +72,6 @@ try:
         with open(output_file_path.absolute(), 'a') as fd:
             if not file_create:
                 fd.write("model,accuracy\n")
-            fd.write(f"{model_name},{micro_f1}\n")
+            fd.write(f"{model_name},{validation_f1_micro}\n")
 except Exception as ex:
     print(f"ERROR during evaluating model {model_name}: {ex}")
