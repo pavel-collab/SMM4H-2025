@@ -90,11 +90,13 @@ def evaleate_model(model, trainer, tokenized_val_dataset, device):
     preds = np.argmax(target_predictions, axis=-1)
     true_lables = tokenized_val_dataset['label']
     cm = confusion_matrix(true_lables, preds)
-    report = classification_report(true_lables, preds)
-    accuracy = np.sum(np.diag(cm)) / np.sum(cm)
-    # Вычисление взвешенной F1-меры для текущей модели
-    micro_f1 = f1_score(true_lables, preds, average='micro')
-    return cm, report, accuracy, micro_f1
+    
+    validation_accuracy = accuracy_score(preds, true_lables)
+    validation_precision = precision_score(preds, true_lables)
+    validation_recall = recall_score(preds, true_lables)
+    validation_f1_micro = f1_score(preds, true_lables, average='micro')
+    validation_f1_macro = f1_score(preds, true_lables, average='macro')
+    return cm, validation_accuracy, validation_precision, validation_recall, validation_f1_micro, validation_f1_macro
 
 def plot_confusion_matrix(cm, classes, model_name=None, save_file_path=None):
     with plt.style.context('default'):  
