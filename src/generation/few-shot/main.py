@@ -1,9 +1,20 @@
 from transformers import pipeline
+import argparse
+import pandas as pd
 
-# дополнительно написать альтернативный пример с применением chat-templetes
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', '--model_name', type=str, default='gpt2-medium', help='set a path to generation model gguf file')
+parser.add_argument('-n', '--num_generations', type=int, default=5, help='set number of output generations')
+args = parser.parse_args()
+
+model_name = args.model_name
+num_generations = args.num_generations
+assert(num_generations > 0)
+
+#TODO: дополнительно написать альтернативный пример с применением chat-templetes
 
 # Создаем генератор
-generator = pipeline('text-generation', model='gpt2-medium')
+generator = pipeline('text-generation', model=model_name)
 
 # Задаем промпт с примерами
 prompt = """
@@ -21,11 +32,17 @@ Use the following examples:
 output = generator(
     prompt,
     max_length=200,
-    num_return_sequences=1,
+    num_return_sequences=num_generations,
     temperature=0.5,
     top_k=50
 )
 
-# Выводим результат
-print("\nFew-shot результат:")
-print(output[0]['generated_text'])
+generations = [output[i]['generated_text'] for i in range(len(output))]
+
+assert(len(generations) > 0)
+assert(len(generations) == num_generations)
+
+df = pd.DataFrame(generations, columns=['text'])
+
+# Сохраняем в CSV
+df.to_csv(f'./data/generated/generation_{model_name}.csv', index=False, encoding='utf-8')
