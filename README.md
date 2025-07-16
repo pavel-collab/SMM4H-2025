@@ -28,3 +28,11 @@ python3 ./src/data_preprocessing/check_feature_visualize.py -d ./data/en_train_d
 ```
 ./scripts/evaluate_models.sh
 ```
+
+## Обучение генератора
+
+Для начала нам нужно составить специальный датасет в формате json для обучения
+```
+./scripts/make_json_datasets.sh
+```
+
