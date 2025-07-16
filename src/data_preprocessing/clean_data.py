@@ -78,8 +78,8 @@ def main():
             positive_df, negative_df = split_samples(lang_df)
             file_name_positive = f"{path_to_splited_data}/{lang}_positive_{TEMPLATE_SPLIT_DATA}"
             file_name_negative = f"{path_to_splited_data}/{lang}_negative_{TEMPLATE_SPLIT_DATA}"
-            positive_df.to_csv(file_name_positive)
-            negative_df.to_csv(file_name_negative)
+            positive_df.to_csv(file_name_positive, index=False)
+            negative_df.to_csv(file_name_negative, index=False)
         return 
 
     for lang in LANGUAGES:
