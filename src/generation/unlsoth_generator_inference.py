@@ -6,6 +6,7 @@ import pandas as pd
 import os
 from tqdm import tqdm
 import re
+import numpy as np
 
 '''
 Эта функция парсинга НЕ универсальная. Она написана под парсинг ответа модели
@@ -106,11 +107,12 @@ for _ in tqdm(range(num_generations)):
     # парсим ответ модели, убираем ненужные артефакты генерации
     parced_response = parce_model_answer(tokenizer.batch_decode(outputs)[0])
     parced_response = parced_response[len("Tweet: "):]
-    parced_response.strip() # убираем кавычки
+    parced_response.strip().replace("\"", "") # убираем кавычки
     generations.append(parced_response)
-    
+ 
+labels = np.ones((len(generations))).astype(int)
 # Сохраняем данные в csv файл
-df = pd.DataFrame(generations, columns=['text'])
+df = pd.DataFrame({'text': generations, 'label': labels})
 
 save_path = Path(f'{root_data_path.absolute()}/{SAVE_GENERATIONS_PATH_TEMPLATE}/')
 if not save_path.exists():
@@ -118,7 +120,5 @@ if not save_path.exists():
     
 assert(save_path.exists())
 
-#TODO: add label 1
-#TODO: filtration and extracting unswer befor drop content into file
 #! Обратите внимание, что этот метод перезаписывает документ, то есть контент будет потерян
 df.to_csv(f'{save_path.absolute()}/{args.model_name.replace('/', '-')}_generation.csv', index=False)

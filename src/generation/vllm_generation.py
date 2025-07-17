@@ -7,6 +7,7 @@ import os
 from utils import debug_print, ParsedFileName, LANGUAGES
 import json
 import random
+import numpy as np
 
 '''
 В данном скрипте генерируем и сохраняем синтетические данные
@@ -124,7 +125,8 @@ for _ in tqdm(range(n_samples)):
         generated_text = output.outputs[0].text.strip()
         generations.append(f"{generated_text}")
 
-df = pd.DataFrame(generations, columns=['text'])
+labels = np.ones((len(generations))).astype(int)
+df = pd.DataFrame({'text': generations, 'label': labels})
 
 save_path = Path(f'{root_data_path.absolute()}/{SAVE_GENERATIONS_PATH_TEMPLATE}/')
 if not save_path.exists():
@@ -132,5 +134,4 @@ if not save_path.exists():
     
 assert(save_path.exists())
 
-#TODO: add label 1
 df.to_csv(f'{save_path.absolute()}/{model_name.replace('/', '-')}_generation.csv', index=False) 

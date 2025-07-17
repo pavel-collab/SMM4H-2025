@@ -7,6 +7,7 @@ import json
 import random
 from utils import debug_print, ParsedFileName, LANGUAGES
 import os
+import numpy as np
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 '''
@@ -128,7 +129,8 @@ for _ in tqdm(range(num_generations)):
 assert(len(generations) > 0)
 assert(len(generations) == num_generations)
 
-df = pd.DataFrame(generations, columns=['text'])
+labels = np.ones((len(generations))).astype(int)
+df = pd.DataFrame({'text': generations, 'label': labels})
 
 # Сохраняем в CSV
 df.to_csv(f'{root_data_dir_path.absolute()}/{SAVE_GENERATIONS_PATH_TEMPLATE}/{model_name}_generation.csv', index=False, encoding='utf-8')
