@@ -7,9 +7,31 @@ import os
 
 from utils import ParsedFileName, LANGUAGES
 
+'''
+В этом скрипте мы используем исходные данные (положительные примеры)
+для формирования json датасета для обучения unsolth модели генерации.
+Генератор предложений unsloth при обучении принимает датасет datasets.Dataset
+данных. Если переводить этот формат в json, он будет иметь следующую структуру
+
+[
+    {
+        "conversations": [
+            {
+                "content": "prompt 1",
+                "role": "user"
+            },
+            {
+                "content": "answer 1",
+                "role": "assistant"
+            }
+        ]
+    },
+    ...
+]
+'''
+
 JSON_SAVE_DIRNAME_TEMPLATE = 'json_datasets'
 
-#TODO: take a path with positive samples automatic
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--data_path', type=str, default='./data/', help='set path to root dir with data')
 parser.add_argument('--language', type=str, default='en', help='set language of raw positive dataset')
@@ -18,6 +40,10 @@ args = parser.parse_args()
 lang = args.language
 assert(lang in LANGUAGES)
 
+'''
+Находим в корневом каталоге с данными файл с положительными примерами на 
+нужном языке (создали в процессе работы clean_data.py)
+'''
 root_data_dir_path = Path(args.data_path)
 assert(root_data_dir_path.exists())
 splited_data_path = Path(f'{root_data_dir_path.absolute()}/splited_samples/')
@@ -41,7 +67,7 @@ df = pd.read_csv(target_file_info.filepath.absolute())
 
 PROMPT = 'Generate an example of a comment or tweet with Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug.'
 
-# чуть позже это мы уберем для оптимизации. Будем фильтровать данные на предобработке
+# Формируем структуру датасета в формате json
 dataset = []
 for _, row in df.iterrows():
     sample = {}
@@ -51,6 +77,7 @@ for _, row in df.iterrows():
     sample['conversations'] = convarsation
     dataset.append(sample)
         
+# сохраняем данные в json формате; позже мы импортируем их в скрипте для обучения модели и создадим объект datasets.Dataset
 save_file_path = Path(f'{root_data_dir_path.absolute()}/{JSON_SAVE_DIRNAME_TEMPLATE}/{target_file_info.filename}_json.json')
 
 if not save_file_path.parent.exists():
