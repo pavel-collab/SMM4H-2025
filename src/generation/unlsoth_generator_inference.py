@@ -5,6 +5,16 @@ import argparse
 import pandas as pd
 import os
 from tqdm import tqdm
+import re
+
+'''
+Эта функция парсинга НЕ универсальная. Она написана под парсинг ответа модели
+unsloth/gemma-3-4b-it с chat_template gemma-3.
+Другие модели и шаблоны возможно потребуют другой функции парсинга 
+'''
+def parce_model_answer(model_response: str):
+    model_answer = re.search(r'<start_of_turn>model\n(.*?)<end_of_turn>', model_response, re.DOTALL)
+    return model_answer.group(1).strip()
 
 '''
 В данном скрипте мы запускаем на инференсе натренированную в скрипте unsloth_generator_inference.py
@@ -13,13 +23,21 @@ from tqdm import tqdm
 путь к общему каталогку с данными (навигация внутри этого каталога прописана в самой программе).
 
 Скрипт генерирует предложения по заданному пользовательскому запросу.
+
+Few-shot генерация
 '''
 
 SAVE_MODEL_PATH = './saved_models/' # каталог с сохраненной моделью
 SAVE_GENERATIONS_PATH_TEMPLATE = 'generations' # подкаталог в каталоге с данными, куда сохраняем нагенерированные данные
 
 # Промпт для генерации данных
-PROMPT = "Generate an example of a comment or tweet with Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug"
+PROMPT = '''
+Generate one tweet with Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug.
+Don't use images or emojies, but you can write a hashtags.
+Write the [TWEET] with folowing template:
+
+Tweet: [TWEET]
+'''
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_name', type=str, default='unsloth/gemma-3-4b-it', help='set open source model name')
@@ -70,6 +88,10 @@ assert(num_generations > 0)
 
 generations = []
 
+#! При генерации большого количества примеров возможно имеет смысл делать периодическую выгрузку данных в csv файл
+#! Если задать количество генераций, условно 10000000, то можно просто перегрузить оперативную память и
+#! потерять сгенерированные примеры. Так что стоит выбрать оптимальные размер батча для генерации и записывать
+#! сгенерированные данные на диск.
 # генерация синтетических данных
 for _ in tqdm(range(num_generations)):
     outputs = model.generate(
@@ -80,8 +102,12 @@ for _ in tqdm(range(num_generations)):
         top_p = 0.95, 
         top_k = 64,
     )
-
-    generations.append(tokenizer.batch_decode(outputs)[0])
+    
+    # парсим ответ модели, убираем ненужные артефакты генерации
+    parced_response = parce_model_answer(tokenizer.batch_decode(outputs)[0])
+    parced_response = parced_response[len("Tweet: "):]
+    parced_response.strip() # убираем кавычки
+    generations.append(parced_response)
     
 # Сохраняем данные в csv файл
 df = pd.DataFrame(generations, columns=['text'])
@@ -94,4 +120,5 @@ assert(save_path.exists())
 
 #TODO: add label 1
 #TODO: filtration and extracting unswer befor drop content into file
+#! Обратите внимание, что этот метод перезаписывает документ, то есть контент будет потерян
 df.to_csv(f'{save_path.absolute()}/{args.model_name.replace('/', '-')}_generation.csv', index=False)
