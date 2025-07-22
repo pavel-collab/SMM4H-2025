@@ -1,12 +1,31 @@
-import pandas as pd
-from datasets import load_dataset
+'''
+Важно, чтобы импорт библиотеки unsloth происходил до импорта библиотек 
+trl, transformers и peft, иначе можно столкнуться с бредовыми и
+неожиданными ошибками.
+'''
+from unsloth import FastLanguageModel, is_bfloat16_supported
 from trl import SFTTrainer
 from transformers import TrainingArguments
-from unsloth import is_bfloat16_supported, FastLanguageModel
+import pandas as pd
 from sklearn.model_selection import train_test_split
+from datasets import load_dataset
+import argparse
+from pathlib import Path
+import os
 
-model_name = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
+parser = argparse.ArgumentParser()
+#! Пока что указываем путь к файлу с данными для обучения; чуть позже, когда будет понятна структура данных в каталоге -- переделаем
+#TODO: добавить язык датасета и автоматически искать нужный датасет по корневому пути + язык
+parser.add_argument('-d', '--data_path', type=str, default='./data/', help='set path to file with training data')
+parser.add_argument('-m', '--model_name', type=str, default='unsloth/mistral-7b-instruct-v0.3-bnb-4bit', help='set open source model name')
+args = parser.parse_args()
 
+model_name = args.model_name
+
+data_path = Path(args.data_path)
+assert(data_path.exists())
+
+# Импортируем модель и токенизатор
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name = model_name,
     max_seq_length = 2048,
@@ -30,24 +49,30 @@ model = FastLanguageModel.get_peft_model(
 )
 
 #TODO: need to refactor
-# Load training data
+# Set a label mapping for construct a training prompt
 label_map = {
     0: "without Adverse Drug Events",
     1: "with Adverse Drug Events"
 }
 
-
-train = pd.read_csv("../data/en_train_data_SMM4H_2025_clean.csv")
+# import training data
+train = pd.read_csv(data_path.absolute())
 train, val = train_test_split(train, test_size=0.2, random_state=20)
 
+# construct a dataset with training prompt for training
 train["instruction"] = "Classify this math problem into two topics: with Adverse Drug Events and without. Adverse Drug Events are negative medical side effects associated with a drug"
 train["label"] = train["label"].map(label_map)
 train = train.rename(columns={"label": "output", "text": "input"})
 train.to_csv("train_updated.csv", index=False)
 
-dataset = load_dataset("csv", data_files="train_updated.csv", split="train")
+tmp_dataset_path = Path('./tmp')
+if not tmp_dataset_path.exists():
+    os.mkdir(tmp_dataset_path.absolute())
+    
+#TODO: перегрузить название файла языком датасета (en, ru, ...)
+dataset = load_dataset("csv", data_files=f"{tmp_dataset_path.absolute()}/train_updated.csv", split="train")
 
-# Prepare data
+# Prepare training prompt
 prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
 
 ### Instruction:
@@ -59,6 +84,7 @@ prompt = """Below is an instruction that describes a task, paired with an input 
 ### Response:
 {}"""
 
+# data formating before training
 EOS_TOKEN = tokenizer.eos_token
 def formatting_prompts_func(examples):
     instructions = examples["instruction"]
@@ -71,7 +97,7 @@ def formatting_prompts_func(examples):
     return { "text" : texts, }
 pass
 
-dataset = dataset.map(formatting_prompts_func, batched = True,)
+dataset = dataset.map(formatting_prompts_func, batched=True,)
 
 # Setup trainer
 trainer = SFTTrainer(
