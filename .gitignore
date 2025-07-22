@@ -2,6 +2,9 @@ data
 .vscode
 .venv*
 images
-__pycache__
-logs
 results
+logs
+__pycache__
+debug.txt
+saved_models
+unsloth_compiled_cache

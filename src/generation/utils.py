@@ -1,7 +1,21 @@
+DEBUG = True
 from pathlib import Path
 import os
 
 LANGUAGES = ['ru', 'en', 'fr', 'de']
+
+def debug_print(print_func):
+    """Декоратор для создания отладочной версии функции печати"""
+    def wrapper(*args, **kwargs):
+        if DEBUG:
+            # Добавляем префикс [DEBUG] к выводу
+            new_args = ("[DEBUG]", *args)
+            return print_func(*new_args, **kwargs)
+        return None
+    return wrapper
+
+debug_print = debug_print(print)
+
 class ParsedFileName:
     
     def __init__(self, filepath: str):

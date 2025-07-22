@@ -28,3 +28,36 @@ python3 ./src/data_preprocessing/check_feature_visualize.py -d ./data/en_train_d
 ```
 ./scripts/evaluate_models.sh
 ```
+
+## Обучение генератора
+
+Для начала нам нужно составить специальный датасет в формате json для обучения
+```
+./scripts/make_json_datasets.sh
+```
+
+Обученим модель генерации через библиотеку unsloth. LoRa адаптеры обученной модели будут сохранены локально
+```
+python3 unsloth_generator_train.py -d ./data
+```
+
+Запускаем обученную модель на инференсе. Сгенерированные данные будут записаны в подкаталог каталога data
+```
+python3 unsloth_generator_inference.py -d ./data
+```
+
+Запуск генератора через vllm
+```
+python3 vllm_generation.py -n 100 -d ./data
+```
+
+Запуск генератора через llama_cpp (на данный момент показывает не очень
+хорошие результаты + требуется предварительно скачать локально модель в формате .gguf)
+```
+python3 llama_cpp_generation.py -m ./saved_models/mistral-7b-instruct-v0.1.Q3_K_M.gguf -n 10 -d ./data/
+```
+
+Запуск модели для перевода примеров (указываем, с какого языка хотим перевести, на данный момент перевод всегда осуществляется на английский)
+```
+python3 translation.py -d ./data --language ru
+```
