@@ -5,3 +5,9 @@ images
 __pycache__
 logs
 results
+unsloth_compiled_cache
+train_updated.csv
+lora_model
+outputs
+submission.csv
+saved_models
