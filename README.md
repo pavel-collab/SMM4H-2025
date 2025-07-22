@@ -28,3 +28,8 @@ python3 ./src/data_preprocessing/check_feature_visualize.py -d ./data/en_train_d
 ```
 ./scripts/evaluate_models.sh
 ```
+
+## Обучение через биюлиотеку unsloth
+```
+python3 ./src/unsloth_classificator_train.py -d ./data/en_train_data_SMM4H_2025_clean.csv
+```
