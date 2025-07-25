@@ -9,7 +9,6 @@ from transformers import (AutoTokenizer,
                           AutoModelForSequenceClassification,
                           Trainer, 
                           TrainingArguments)
-from models.custom_trainer import CustomTrainer
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_name', type=str, default='bert-base-uncased', help='set backbone model name')
@@ -44,7 +43,7 @@ try:
     
     training_args = TrainingArguments(
             output_dir=f"./results/{model_name.replace('/', '-')}_results",
-            evaluation_strategy="steps",
+            eval_strategy="steps",
             learning_rate=2e-5,
             per_device_train_batch_size=batch_size,
             per_device_eval_batch_size=batch_size,
@@ -58,21 +57,12 @@ try:
             gradient_accumulation_steps=2
         )
     
-    # trainer = Trainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=tokenized_train_dataset,
-    #     eval_dataset=tokenized_val_dataset,
-    #     compute_metrics=compute_metrics
-    # )
-    
-    trainer = CustomTrainer(
+    trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=tokenized_train_dataset,
         eval_dataset=tokenized_val_dataset,
-        compute_metrics=compute_metrics,
-        class_weights=clw.class_weights.to(device)
+        compute_metrics=compute_metrics
     )
     
     try:

@@ -28,3 +28,11 @@ python3 ./src/data_preprocessing/check_feature_visualize.py -d ./data/en_train_d
 ```
 ./scripts/evaluate_models.sh
 ```
+
+После обучения в каталоге results будут сохранены натренированные чекпоинты моделей, а в каталоге logs -- информация об обучении,
+которую можно визуализировать через tensorboard.
+
+Визуализация логов через tensorboard
+```
+tensorboard --logdir=./logs
+```
