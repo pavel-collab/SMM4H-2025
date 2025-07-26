@@ -36,3 +36,8 @@ python3 ./src/data_preprocessing/check_feature_visualize.py -d ./data/en_train_d
 ```
 tensorboard --logdir=./logs
 ```
+
+Анализ результатов классификации
+```
+python3 ./src/analyze_results.py
+```
