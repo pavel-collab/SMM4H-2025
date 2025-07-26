@@ -90,7 +90,7 @@ def evaleate_model(model, trainer, tokenized_val_dataset, device):
     preds = np.argmax(target_predictions, axis=-1)
     true_lables = tokenized_val_dataset['label']
     cm = confusion_matrix(true_lables, preds)
-    report = classification_report(true_lables, preds)
+    report = classification_report(true_lables, preds, output_dict=True)
     accuracy = np.sum(np.diag(cm)) / np.sum(cm)
     # Вычисление взвешенной F1-меры для текущей модели
     micro_f1 = f1_score(true_lables, preds, average='micro')
@@ -128,3 +128,40 @@ def get_class_weights(train_df):
     class_weights = (sum(train_class_counts.tolist()) / (n_classes * train_class_counts)).tolist()
     class_weights = torch.tensor(class_weights)
     return class_weights
+
+'''
+Функция принимает словарь metics, в его составе обязательно должны быть 
+accuracy, micro_f1 и выход функции classification_report пакета sklearn.
+Причем выход функции classification_report должен представлять собой словарь, так что,
+убедитесь, что в месте вызова функции classification_report установлен параметр output_dict=True
+'''
+def dump_classification_metrics(model_name, metrics, csv_file=None, use_generation=False):
+    assert('accuracy' in metrics.keys())
+    assert('micro_f1' in metrics.keys())
+    assert('classification_report' in metrics.keys())
+    
+    assert(csv_file is not None)
+    
+    classification_rep = metrics['classification_report']
+    
+    new_row = {
+        'model_name':        [model_name],
+        'accuracy':          [metrics['accuracy']],
+        'micro_f1':          [metrics['micro_f1']],
+        'label_0_precision': [classification_rep['0']['precision']],
+        'label_0_recall':    [classification_rep['0']['recall']],
+        'label_0_f1':        [classification_rep['0']['f1-score']],
+        'label_1_precision': [classification_rep['1']['precision']],
+        'label_1_recall':    [classification_rep['1']['recall']],
+        'label_1_f1':        [classification_rep['1']['f1-score']],
+        'use_generation':    [int(use_generation)]
+    }
+    
+    new_row_df = pd.DataFrame(new_row)
+    
+    try:
+        existing_df = pd.read_csv(csv_file)
+        new_row_df.to_csv(csv_file, mode='a', index=False, header=False)
+    except FileNotFoundError:
+        # Если файла нет, создаем его с заголовками
+        new_row_df.to_csv(csv_file, index=False, header=True)
