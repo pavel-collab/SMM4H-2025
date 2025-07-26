@@ -38,24 +38,37 @@ def fix_random_seed(seed=20):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = False
     
-def get_train_eval_dataset(use_generation=False, get_class_weight_flag=False):
+'''
+В разыных скриптах обучения классификатора (transformers и unsloth)
+ведется работа с разными форматами данных, где-то с датасетом, где-то с 
+raw pandas dataframe, поэтому мы сделали промежуточный вариант функции, которая возвращает
+pandas dataframes и при этом сохранили обратную совместимость.
+'''
+def get_train_eval_dataset_pd(use_generation=False):
     '''
     Можно было бы сначала формировать датасет, а потом только делить его на 
     train и test. Но тут задумка в том, что в части для валидации нет сгенерированных данных.
     '''
     df = pd.read_csv(train_csv_file)
-    
+
+    #! Препроцессинг текста    
     # df['text'] = df['text'].apply(preprocess_text)
 
     train_df, val_df = train_test_split(df, test_size=0.2, random_state=20)
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
-    
+ 
+    #! Добавление сгенерированной выборки к исходным данным   
     # if use_generation:
     #     generated_df = pd.read_csv(generated_csv_file)
     #     generated_df = generated_df.rename(columns={'Question': 'text'})
 
     #     train_df = pd.concat([train_df, generated_df], ignore_index=True)
+    
+    return train_df, val_df
+    
+def get_train_eval_dataset(use_generation=False, get_class_weight_flag=False):
+    train_df, val_df = get_train_eval_dataset_pd(use_generation)
     
     train_dataset = Dataset.from_pandas(train_df)
     val_dataset = Dataset.from_pandas(val_df)
@@ -76,6 +89,14 @@ def get_device():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     return device
 
+def get_metrics(preds, true_lables):
+    cm = confusion_matrix(true_lables, preds)
+    report = classification_report(true_lables, preds, output_dict=True)
+    accuracy = np.sum(np.diag(cm)) / np.sum(cm)
+    # Вычисление взвешенной F1-меры для текущей модели
+    micro_f1 = f1_score(true_lables, preds, average='micro')
+    return cm, report, accuracy, micro_f1
+
 def evaleate_model(model, trainer, tokenized_val_dataset, device):
     model.to(device)
     model.eval()
@@ -89,12 +110,8 @@ def evaleate_model(model, trainer, tokenized_val_dataset, device):
     
     preds = np.argmax(target_predictions, axis=-1)
     true_lables = tokenized_val_dataset['label']
-    cm = confusion_matrix(true_lables, preds)
-    report = classification_report(true_lables, preds, output_dict=True)
-    accuracy = np.sum(np.diag(cm)) / np.sum(cm)
-    # Вычисление взвешенной F1-меры для текущей модели
-    micro_f1 = f1_score(true_lables, preds, average='micro')
-    return cm, report, accuracy, micro_f1
+    
+    return get_metrics(preds, true_lables)
 
 def plot_confusion_matrix(cm, classes, model_name=None, save_file_path=None):
     with plt.style.context('default'):  
@@ -130,6 +147,7 @@ def get_class_weights(train_df):
     return class_weights
 
 '''
+<<<<<<< HEAD
 Функция принимает словарь metics, в его составе обязательно должны быть 
 accuracy, micro_f1 и выход функции classification_report пакета sklearn.
 Причем выход функции classification_report должен представлять собой словарь, так что,
@@ -165,3 +183,19 @@ def dump_classification_metrics(model_name, metrics, csv_file=None, use_generati
     except FileNotFoundError:
         # Если файла нет, создаем его с заголовками
         new_row_df.to_csv(csv_file, index=False, header=True)
+=======
+На вход ожидается pandas dataframe
+'''
+def overload_dataset_by_instruction(df):
+    #TODO: need to refactor
+    # Set a label mapping for construct a training prompt
+    label_map = {
+        0: "without Adverse Drug Events",
+        1: "with Adverse Drug Events"
+    }
+    
+    df["instruction"] = "Classify this math problem into two topics: with Adverse Drug Events and without. Adverse Drug Events are negative medical side effects associated with a drug"
+    df["label"] = df["label"].map(label_map)
+    df = df.rename(columns={"label": "output", "text": "input"})
+    return df
+>>>>>>> bf14a8d (unsloth classification pipeline stable, need to check inference)

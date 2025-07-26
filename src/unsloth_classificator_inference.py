@@ -5,6 +5,9 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import argparse
 from pathlib import Path
+from utils.utils import (fix_random_seed,
+                         overload_dataset_by_instruction,
+                         get_metrics)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_name', type=str, default="unsloth-Qwen3-1.7B-unsloth-bnb-4bit", help='set open source model name')
@@ -12,6 +15,8 @@ parser.add_argument('-m', '--model_name', type=str, default="unsloth-Qwen3-1.7B-
 parser.add_argument('-d', '--data_path', type=str, default='./data/', help='set path to root dir with data')
 parser.add_argument('-n', '--num_generations', type=int, default=100, help='set number of generation samples')
 args = parser.parse_args()
+
+fix_random_seed()
 
 '''
 Данная функция парсинга может отличаться для различных моделей.
@@ -47,8 +52,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 )
 
 # Make a prediction on test set
-train = pd.read_csv(data_path.absolute())
-_, val = train_test_split(train, test_size=0.2, random_state=20)
+_, val = get_train_eval_dataset_pd()
 public_set = val
 
 FastLanguageModel.for_inference(model)
@@ -67,6 +71,14 @@ prompt = """Below is an instruction that describes a task, paired with an input 
 public_set["instruction"] = "Classify this math problem into two topics: with Adverse Drug Events and without. Adverse Drug Events are negative medical side effects associated with a drug"
 public_set.rename(columns = {"text": "input"}, inplace=True)
 
+'''
+Здесь мы собираем в одном датасете всю информацию:
+- исходные примеры
+- ответ модели
+- ответ модели, который прошел через парсер
+- текстовую метку
+- числовую метку
+'''
 raw_outputs = []
 for i in tqdm(range(len(public_set))):
   inputs = tokenizer(
@@ -81,6 +93,7 @@ for i in tqdm(range(len(public_set))):
   outputs = model.generate(**inputs, max_new_tokens = 64, use_cache = True)
   raw_outputs.append(tokenizer.batch_decode(outputs))
   
+public_set["raw_outputs"] = [raw_output[0] for raw_output in raw_outputs]
 public_set["parsed_outputs"] = public_set["raw_outputs"].apply(parse_output)
 
 label_map = {
@@ -89,7 +102,41 @@ label_map = {
 }
 
 label2id = {v:k for k,v in label_map.items()}
-
 public_set["predicted_label"] = public_set["parsed_outputs"].map(label2id)
 
-#TODO: need to fix the result or compare with correct unswer and calculate metrics
+#! Дамп датафрейма с классификацией для дебага, потом можно будет убрать или включать по флагу
+if True:
+    tmp_dataset_path = Path('./tmp')
+    if not tmp_dataset_path.exists():
+        os.mkdir(tmp_dataset_path.absolute())
+        
+    public_set.to_csv('./tmp/public_set_classification.csv', index=False)
+    
+true_labels = public_set['label'] 
+preds = public_set["predicted_label"]
+
+try:
+    print(f"EVALUATE MODEL {model_name}")
+    #TODO: need refactor
+    cm, validation_accuracy, validation_precision, validation_recall, validation_f1_micro, validation_f1_macro = get_metrics(preds, true_labels)
+    
+    print(f"METRICS FOR THIS MODEL:\n")
+    print(
+        f"Accuracy: {validation_accuracy}\n",
+        f"Precision: {validation_precision}\n",
+        f"Recall: {validation_recall}\n",
+        f"F1 micro: {validation_f1_micro}\n",
+        f"F1 macro: {validation_f1_macro}\n"
+    )
+    
+    plot_confusion_matrix(cm, classes=range(n_classes), model_name=model_name, save_file_path='./images')
+    
+    if output_file_path is not None:
+        file_create = output_file_path.exists()
+        
+        with open(output_file_path.absolute(), 'a') as fd:
+            if not file_create:
+                fd.write("model,accuracy\n")
+            fd.write(f"{model_name},{validation_f1_micro}\n")
+except Exception as ex:
+    print(f"ERROR during evaluating model {model_name}: {ex}")

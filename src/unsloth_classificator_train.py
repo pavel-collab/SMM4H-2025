@@ -12,6 +12,11 @@ from datasets import load_dataset
 import argparse
 from pathlib import Path
 import os
+from utils.utils import (fix_random_seed,
+                         get_device,
+                         get_train_eval_dataset_pd,
+                         print_device_info,
+                         overload_dataset_by_instruction)
 
 parser = argparse.ArgumentParser()
 #! Пока что указываем путь к файлу с данными для обучения; чуть позже, когда будет понятна структура данных в каталоге -- переделаем
@@ -24,6 +29,9 @@ model_name = args.model_name
 
 data_path = Path(args.data_path)
 assert(data_path.exists())
+
+fix_random_seed()
+device = get_device()
 
 # Импортируем модель и токенизатор
 model, tokenizer = FastLanguageModel.from_pretrained(
@@ -48,29 +56,25 @@ model = FastLanguageModel.get_peft_model(
     loftq_config = None,
 )
 
-#TODO: need to refactor
-# Set a label mapping for construct a training prompt
-label_map = {
-    0: "without Adverse Drug Events",
-    1: "with Adverse Drug Events"
-}
-
 # import training data
-train = pd.read_csv(data_path.absolute())
-train, val = train_test_split(train, test_size=0.2, random_state=20)
+train, val = get_train_eval_dataset_pd()
 
-# construct a dataset with training prompt for training
-train["instruction"] = "Classify this math problem into two topics: with Adverse Drug Events and without. Adverse Drug Events are negative medical side effects associated with a drug"
-train["label"] = train["label"].map(label_map)
-train = train.rename(columns={"label": "output", "text": "input"})
-train.to_csv("train_updated.csv", index=False)
+print_device_info()
 
 tmp_dataset_path = Path('./tmp')
 if not tmp_dataset_path.exists():
     os.mkdir(tmp_dataset_path.absolute())
     
+# construct a dataset with training prompt for training
+train = overload_dataset_by_instruction(train)
+train.to_csv("./tmp/train_updated.csv", index=False)
+
+val = overload_dataset_by_instruction(val)
+val.to_csv("./tmp/val_updated.csv", index=False)
+    
 #TODO: перегрузить название файла языком датасета (en, ru, ...)
-dataset = load_dataset("csv", data_files=f"{tmp_dataset_path.absolute()}/train_updated.csv", split="train")
+train_dataset = load_dataset("csv", data_files=f"{tmp_dataset_path.absolute()}/train_updated.csv", split="train")
+val_dataset = load_dataset("csv", data_files=f"{tmp_dataset_path.absolute()}/val_updated.csv", split="train")
 
 # Prepare training prompt
 prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
@@ -97,13 +101,15 @@ def formatting_prompts_func(examples):
     return { "text" : texts, }
 pass
 
-dataset = dataset.map(formatting_prompts_func, batched=True,)
+train_dataset = train_dataset.map(formatting_prompts_func, batched=True,)
+val_dataset = val_dataset.map(formatting_prompts_func, batched=True,)
 
 # Setup trainer
 trainer = SFTTrainer(
     model = model,
     tokenizer = tokenizer,
-    train_dataset = dataset,
+    train_dataset = train_dataset,
+    eval_dataset = val_dataset,
     dataset_text_field = "text",
     max_seq_length = 2048,
     dataset_num_proc = 2,
@@ -120,8 +126,10 @@ trainer = SFTTrainer(
         optim = "adamw_8bit",
         weight_decay = 0.01,
         lr_scheduler_type = "linear",
+        eval_strategy="epoch",
         seed = 3407,
-        output_dir = f"{model_name.replace('/', '-')}_outputs",
+        output_dir = f"./results/{model_name.replace('/', '-')}_results",
+        logging_dir=f"./logs/{model_name.replace('/', '-')}_logs", #TODO: почему здесь не сохраняются логи обучения
         report_to = "none"
     ),
 )
@@ -131,5 +139,5 @@ trainer_stats = trainer.train()
 
 #! ATTENTION: here we're saving only LoRa adapters. Not original model itelf
 # save model and tokenizer
-model.save_pretrained(f"{model_name.replace('/', '-')}")
-tokenizer.save_pretrained(f"{model_name.replace('/', '-')}")
+model.save_pretrained(f"./results/{model_name.replace('/', '-')}_results/final_checkpoint")
+tokenizer.save_pretrained(f"./results/{model_name.replace('/', '-')}_results/final_checkpoint")
