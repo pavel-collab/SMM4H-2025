@@ -42,12 +42,14 @@ def main():
     if len(json_data_files) == 0:
         raise Exception(f'there are no files in {json_data_path.absolute()}')
 
-    target_file_info = None
-    for filename in json_data_files:
-        file_info = ParsedFileName(f'{json_data_path.absolute()}/{filename}')
-        if file_info.lang == lang:
-            target_file_info = file_info
-            break
+    #! Временно для тестирования
+    #TODO: исправить
+    target_file_info = ParsedFileName(f'{json_data_path.absolute()}/{json_data_files[0]}')
+    # for filename in json_data_files:
+    #     file_info = ParsedFileName(f'{json_data_path.absolute()}/{filename}')
+    #     if file_info.lang == lang:
+    #         target_file_info = file_info
+    #         break
         
     assert(target_file_info is not None)
     assert(target_file_info.file_extension == '.json')
@@ -117,7 +119,7 @@ def main():
             gradient_accumulation_steps = 4, # Use GA to mimic batch size!
             warmup_steps = 5,
             # num_train_epochs = 1, # Set this for 1 full training run.
-            max_steps = 30,
+            max_steps = 2000,
             learning_rate = 2e-4, # Reduce to 2e-5 for long training runs
             logging_steps = 1,
             optim = "adamw_8bit",

@@ -61,3 +61,30 @@ python3 llama_cpp_generation.py -m ./saved_models/mistral-7b-instruct-v0.1.Q3_K_
 ```
 python3 translation.py -d ./data --language ru
 ```
+
+Для того, чтобы перевести положительные примеры на целевой язык -- запустите скрипт
+Вниимание! На данный момент работа этого bash-скрипта не протестирована, целевым языком является английский.
+```
+./srcipts/translate_samples.sh
+```
+
+Для того, чтобы сформировать новый комбинированный датасет
+```
+python3 ./src/generation/compile_generated_dataset.py --add_translated -add_generated --language en
+```
+
+## Текущее состояние и порядок действий
+
+```
+python3 ./src/generation/translation.py -d ./data --language ru
+python3 ./src/generation/translation.py -d ./data --language fr
+python3 ./src/generation/translation.py -d ./data --language de
+
+python3 ./src/generation/compile_generated_dataset.py --add_translated --language en
+
+python3 ./src/data_preprocessing/make_dataset.py -d ./data/new_datasets/new_dataset.csv
+
+python3 ./src/generation/unsloth_generator_train.py -d ./data
+
+python3 ./src/generation/unlsoth_generator_inference.py -d ./data -n 450
+```

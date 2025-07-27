@@ -8,3 +8,6 @@ __pycache__
 debug.txt
 saved_models
 unsloth_compiled_cache
+.unsloth_classification_venv
+tmp
+evaluation_report.csv
