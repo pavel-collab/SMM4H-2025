@@ -6,18 +6,21 @@ from sklearn.model_selection import train_test_split
 import argparse
 from pathlib import Path
 from utils.utils import (fix_random_seed,
-                         overload_dataset_by_instruction,
-                         get_metrics)
+                         get_metrics,
+                         get_train_eval_dataset_pd,
+                         dump_classification_metrics)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-m', '--model_name', type=str, default="unsloth-Qwen3-1.7B-unsloth-bnb-4bit", help='set open source model name')
+parser.add_argument('-m', '--model_name', type=str, default="unsloth-mistral-7b-instruct-v0.3-bnb-4bit", help='set open source model name')
 #TODO: находить автоматически нужные данные. Пока что задаем путь к данным явно
 parser.add_argument('-d', '--data_path', type=str, default='./data/', help='set path to root dir with data')
-parser.add_argument('-n', '--num_generations', type=int, default=100, help='set number of generation samples')
 args = parser.parse_args()
+
+DUMP_METRICS_FILEPATH = 'evaluation_report.csv'
 
 fix_random_seed()
 
+#TODO: it can be moved to utils
 '''
 Данная функция парсинга может отличаться для различных моделей.
 В частности может отличаться последний токен, поэтому распознование
@@ -31,7 +34,7 @@ tokenizer.batch_decode(outputs)
 '''
 def parse_output(output):
     # re_match = re.search(r'### Response:\n(.*?)<\|end▁of▁sentence\|>', output, re.DOTALL)
-    re_match = re.search(r'### Response:\n(.*?)<\|im_end\|>', output, re.DOTALL)
+    re_match = re.search(r'### Response:\n(.*?)<\/s>', output, re.DOTALL)
     if re_match:
         response = re_match.group(1).strip()
         return response
@@ -45,18 +48,20 @@ data_path = Path(args.data_path)
 assert(data_path.exists())
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = f"{model_name.replace('/', '-')}",
+    #TODO: final_checkpoint это костыль -- исправить
+    model_name = f"./results/{model_name.replace('/', '-')}_results",
     max_seq_length = 2048,
     dtype = None,
     load_in_4bit = True
 )
 
+#TODO: it can be made as a function call
 # Make a prediction on test set
-_, val = get_train_eval_dataset_pd()
+train = pd.read_csv(data_path.absolute())
+_, val = train_test_split(train, test_size=0.2, random_state=20)
 public_set = val
 
 FastLanguageModel.for_inference(model)
-
 prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
 
 ### Instruction:
@@ -68,7 +73,7 @@ prompt = """Below is an instruction that describes a task, paired with an input 
 ### Response:
 {}"""
 
-public_set["instruction"] = "Classify this math problem into two topics: with Adverse Drug Events and without. Adverse Drug Events are negative medical side effects associated with a drug"
+public_set["instruction"] = "Classify this example into two topics: with Adverse Drug Events and without Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug"
 public_set.rename(columns = {"text": "input"}, inplace=True)
 
 '''
@@ -103,40 +108,16 @@ label_map = {
 
 label2id = {v:k for k,v in label_map.items()}
 public_set["predicted_label"] = public_set["parsed_outputs"].map(label2id)
-
-#! Дамп датафрейма с классификацией для дебага, потом можно будет убрать или включать по флагу
-if True:
-    tmp_dataset_path = Path('./tmp')
-    if not tmp_dataset_path.exists():
-        os.mkdir(tmp_dataset_path.absolute())
-        
-    public_set.to_csv('./tmp/public_set_classification.csv', index=False)
     
 true_labels = public_set['label'] 
 preds = public_set["predicted_label"]
+ 
+print(f"EVALUATE MODEL {model_name}")
+cm, validation_report, accuracy, micro_f1 = get_metrics(preds, true_labels)
 
-try:
-    print(f"EVALUATE MODEL {model_name}")
-    #TODO: need refactor
-    cm, validation_accuracy, validation_precision, validation_recall, validation_f1_micro, validation_f1_macro = get_metrics(preds, true_labels)
-    
-    print(f"METRICS FOR THIS MODEL:\n")
-    print(
-        f"Accuracy: {validation_accuracy}\n",
-        f"Precision: {validation_precision}\n",
-        f"Recall: {validation_recall}\n",
-        f"F1 micro: {validation_f1_micro}\n",
-        f"F1 macro: {validation_f1_macro}\n"
-    )
-    
-    plot_confusion_matrix(cm, classes=range(n_classes), model_name=model_name, save_file_path='./images')
-    
-    if output_file_path is not None:
-        file_create = output_file_path.exists()
-        
-        with open(output_file_path.absolute(), 'a') as fd:
-            if not file_create:
-                fd.write("model,accuracy\n")
-            fd.write(f"{model_name},{validation_f1_micro}\n")
-except Exception as ex:
-    print(f"ERROR during evaluating model {model_name}: {ex}")
+metrics = {
+    'accuracy': accuracy,
+    'micro_f1': micro_f1,
+    'classification_report': validation_report
+}
+dump_classification_metrics(model_name, metrics, csv_file=DUMP_METRICS_FILEPATH, use_generation=False)

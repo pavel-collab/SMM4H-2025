@@ -14,3 +14,4 @@ outputs
 submission.csv
 saved_models
 tmp
+.unsloth_classification_venv

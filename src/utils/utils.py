@@ -44,12 +44,15 @@ def fix_random_seed(seed=20):
 raw pandas dataframe, поэтому мы сделали промежуточный вариант функции, которая возвращает
 pandas dataframes и при этом сохранили обратную совместимость.
 '''
-def get_train_eval_dataset_pd(use_generation=False):
+def get_train_eval_dataset_pd(use_generation=False, data_path=None):
     '''
     Можно было бы сначала формировать датасет, а потом только делить его на 
     train и test. Но тут задумка в том, что в части для валидации нет сгенерированных данных.
     '''
-    df = pd.read_csv(train_csv_file)
+    if data_path is None:
+        df = pd.read_csv(train_csv_file)
+    else:
+        df = pd.read_csv(data_path)
 
     #! Препроцессинг текста    
     # df['text'] = df['text'].apply(preprocess_text)
@@ -147,7 +150,6 @@ def get_class_weights(train_df):
     return class_weights
 
 '''
-<<<<<<< HEAD
 Функция принимает словарь metics, в его составе обязательно должны быть 
 accuracy, micro_f1 и выход функции classification_report пакета sklearn.
 Причем выход функции classification_report должен представлять собой словарь, так что,
@@ -183,7 +185,8 @@ def dump_classification_metrics(model_name, metrics, csv_file=None, use_generati
     except FileNotFoundError:
         # Если файла нет, создаем его с заголовками
         new_row_df.to_csv(csv_file, index=False, header=True)
-=======
+
+'''
 На вход ожидается pandas dataframe
 '''
 def overload_dataset_by_instruction(df):
@@ -194,8 +197,7 @@ def overload_dataset_by_instruction(df):
         1: "with Adverse Drug Events"
     }
     
-    df["instruction"] = "Classify this math problem into two topics: with Adverse Drug Events and without. Adverse Drug Events are negative medical side effects associated with a drug"
+    df["instruction"] = "Classify this example into two topics: with Adverse Drug Events and without Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug"
     df["label"] = df["label"].map(label_map)
     df = df.rename(columns={"label": "output", "text": "input"})
     return df
->>>>>>> bf14a8d (unsloth classification pipeline stable, need to check inference)
