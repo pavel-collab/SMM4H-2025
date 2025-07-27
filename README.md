@@ -41,3 +41,15 @@ tensorboard --logdir=./logs
 ```
 python3 ./src/analyze_results.py
 ```
+
+## Обучение через биюлиотеку unsloth
+
+Тренировка классификатора
+```
+python3 ./src/unsloth_classificator_train.py -d ./data/en_train_data_SMM4H_2025_clean.csv
+```
+
+Валидация обученного классификатора
+```
+python3 ./src/unsloth_classificator_inference.py -d ./data/en_train_data_SMM4H_2025_clean.csv
+```

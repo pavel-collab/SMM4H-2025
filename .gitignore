@@ -8,3 +8,10 @@ results
 tmp
 unsloth_compiled_cache
 evaluation_report.csv
+train_updated.csv
+lora_model
+outputs
+submission.csv
+saved_models
+tmp
+.unsloth_classification_venv
