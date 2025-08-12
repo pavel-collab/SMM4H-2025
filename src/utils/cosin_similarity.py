@@ -18,7 +18,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--raw_data_path', type=str, default='./data/splited_samples/en_positive_splited_data_SMM4H_2025_clean.csv', help='set a path to the file with positive samples')
 args = parser.parse_args()
 
-model_name = 'paraphrase-multilingual-mpnet-base-v2'
+# model_name = 'paraphrase-multilingual-mpnet-base-v2'
+model_name = 'distiluse-base-multilingual-cased-v1'
+
 # В этом массиве у нас будут целевые предложения для исследования
 # Они будут сравниваться с предложениями из исходного датасета и высчитываться метрика похожести
 TARGET_SAMPLES = [
