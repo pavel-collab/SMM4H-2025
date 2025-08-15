@@ -5,7 +5,7 @@ import datasets
 from trl import SFTTrainer, SFTConfig
 from unsloth.chat_templates import train_on_responses_only
 from pathlib import Path
-from utils import debug_print, ParsedFileName, LANGUAGES
+from utils import debug_print, FileInfo, LANGUAGES
 import argparse
 import os
 
@@ -44,9 +44,9 @@ def main():
 
     #! Временно для тестирования
     #TODO: исправить
-    target_file_info = ParsedFileName(f'{json_data_path.absolute()}/{json_data_files[0]}')
+    target_file_info = FileInfo(f'{json_data_path.absolute()}/{json_data_files[0]}')
     # for filename in json_data_files:
-    #     file_info = ParsedFileName(f'{json_data_path.absolute()}/{filename}')
+    #     file_info = FileInfo(f'{json_data_path.absolute()}/{filename}')
     #     if file_info.lang == lang:
     #         target_file_info = file_info
     #         break

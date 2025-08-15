@@ -3,7 +3,7 @@ import argparse
 import pandas as pd
 from pathlib import Path
 import os
-from utils import ParsedFileName
+from utils import FileInfo
 from tqdm import tqdm
 
 '''
@@ -44,7 +44,7 @@ if len(splited_data_files) == 0:
 
 target_file_info = None
 for filename in splited_data_files:
-    file_info = ParsedFileName(f'{splited_data_path.absolute()}/{filename}')
+    file_info = FileInfo(f'{splited_data_path.absolute()}/{filename}')
     if file_info.lang == lang and file_info.positive:
         target_file_info = file_info
         break

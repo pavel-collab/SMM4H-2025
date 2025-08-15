@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 import os
-from utils import debug_print, ParsedFileName, LANGUAGES
+from utils import debug_print, FileInfo, LANGUAGES
 import json
 import random
 import numpy as np
@@ -53,7 +53,7 @@ if len(json_data_files) == 0:
 
 target_file_info = None
 for filename in json_data_files:
-    file_info = ParsedFileName(f'{json_data_path.absolute()}/{filename}')
+    file_info = FileInfo(f'{json_data_path.absolute()}/{filename}')
     if file_info.lang == lang:
         target_file_info = file_info
         break

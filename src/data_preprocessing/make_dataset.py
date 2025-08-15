@@ -5,7 +5,7 @@ import json
 import datasets
 import os
 
-from utils import ParsedFileName, LANGUAGES
+from utils import FileInfo, LANGUAGES
 
 #! ATTENTION: depends on file position in project tree
 root_dir = Path(__file__).resolve().parent.parent
@@ -43,7 +43,7 @@ args = parser.parse_args()
 lang = args.language
 assert(lang in LANGUAGES)
 
-target_file_info = ParsedFileName(args.data_path)
+target_file_info = FileInfo(args.data_path)
     
 assert(target_file_info is not None)
 assert(target_file_info.file_extension == '.csv')
