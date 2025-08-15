@@ -1,0 +1,7 @@
+params:
+  lang: en
+  files:
+    - "file_1"
+    - "file_2"
+    - "file_3"
+    - "file_4"

@@ -21,8 +21,7 @@ model_name = args.model_name
 fix_random_seed()
 device = get_device()
 
-train_dataset, eval_dataset = get_train_eval_dataset(use_generation=False,
-                                                     get_class_weight_flag=True)
+train_dataset, eval_dataset = get_train_eval_dataset(get_class_weight_flag=True)
 
 texts = train_dataset['text']
 labels = train_dataset['label']

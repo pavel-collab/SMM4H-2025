@@ -7,6 +7,9 @@ import os
 
 from utils import ParsedFileName, LANGUAGES
 
+#! ATTENTION: depends on file position in project tree
+root_dir = Path(__file__).resolve().parent.parent
+
 '''
 В этом скрипте мы используем исходные данные (положительные примеры)
 для формирования json датасета для обучения unsolth модели генерации.
@@ -30,15 +33,10 @@ from utils import ParsedFileName, LANGUAGES
 ]
 '''
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#! Переделали логику скрипта. Теперь мы используем не разделенные файлы с положительными примерами, а
-#! конкретный указанный файл с данными.
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 JSON_SAVE_DIRNAME_TEMPLATE = 'json_datasets'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--data_path', type=str, default='./data/', help='set path to dir with data')
+parser.add_argument('-d', '--data_path', help='set path to dir with data')
 parser.add_argument('--language', type=str, default='en', help='set language of raw positive dataset')
 args = parser.parse_args()
 
@@ -65,19 +63,13 @@ for _, row in df.iterrows():
     convarsation.append({'content': row['text'], 'role': 'assistant'})
     sample['conversations'] = convarsation
     dataset.append(sample)
-        
-#TODO: нужно переделать путь, куда сохраняется json-датасет. Сейкас пока захардкодили
-# сохраняем данные в json формате; позже мы импортируем их в скрипте для обучения модели и создадим объект datasets.Dataset
-save_file_path = Path(f'./data/{JSON_SAVE_DIRNAME_TEMPLATE}/{target_file_info.filename}_json.json')
 
-if not save_file_path.parent.exists():
-    os.mkdir(save_file_path.parent.absolute())
+save_json_path = Path(f'{root_dir}/data/{JSON_SAVE_DIRNAME_TEMPLATE}')
+if not save_json_path.exists():
+    os.mkdir(save_json_path.absolute())
+   
+# сохраняем данные в json формате; позже мы импортируем их в скрипте для обучения модели и создадим объект datasets.Dataset
+save_file_path = Path(f'{save_json_path.absolute()}/{lang}_json_dataset.json')
                                
 with open(save_file_path.absolute(), 'w') as json_file:
     json.dump(dataset, json_file)
-    
-def import_dataset_from_json(json_file_path: str):
-    with open(json_file_path, 'r') as json_file:
-        data = json.load(json_file)
-        dataset = datasets.Dataset.from_list(data)
-    return dataset

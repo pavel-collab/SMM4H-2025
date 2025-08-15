@@ -2,13 +2,30 @@ import pandas as pd
 import os
 import argparse
 from pathlib import Path
-from utils import ParsedFileName, LANGUAGES
+from utils import LANGUAGES
+import yaml
 
-SAVE_GENERATIONS_PATH_TEMPLATE = 'generations' # подкаталог в каталоге с данными, куда сохраняем нагенерированные данные
-SAVE_TRANSLATED_DIR_TEMPLATE = 'translated'
-SAVE_NEW_DATASET_DIR_TEMPLATE = 'new_datasets'
+#! ATTENTION: depends on file position in project tree
+root_dir = Path(__file__).resolve().parent.parent
+
+SAVE_NEW_DATASET_DIR_TEMPLATE = 'compiled_datasets'
 
 CHUNK_SIZE = 1000
+
+def read_yaml_file(file_path):
+    """
+    Читает данные из YAML файла и возвращает их в виде словаря.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            data = yaml.safe_load(file)
+            return data
+    except FileNotFoundError:
+        print(f"Ошибка: Файл не найден: {file_path}")
+        return None
+    except yaml.YAMLError as e:
+        print(f"Ошибка при парсинге YAML: {e}")
+        return None
 
 '''
 В данном подходе логика следующая:
@@ -39,71 +56,61 @@ source_data_files = {
 сгенерированные данные или нет.
 '''
 
+'''
+Все параметры прописываются в конфигурационном файле config.yaml. 
+Структура файла следующая:
+
+params:
+  lang: en
+  files:
+    - "file_1"
+    - "file_2"
+    - "file_3"
+    - "file_4"
+
+где lang -- язык датасета, с которым ведется работа,
+а files -- список файлов, которые необходимо обхединить. 
+Необходимо указать абсолютный путь к файлам!
+'''
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data_path', type=str, default='./data/', help='set path to root dir with data')
-    parser.add_argument('--add_generated', action='store_true', help='if we want to add generated examples to dataset')
-    parser.add_argument('--add_translated', action='store_true', help='if we want to add translated examples to dataset')
-    parser.add_argument('--language', type=str, default="en", help='language of new dataset')
+    parser.add_argument('-с', '--config', type=str, default='./config.yaml', help='set path to config with file to compilation')
     args = parser.parse_args()
+
+    config_path = Path(args.config)
+    assert(config_path.exists())
+    config_data = read_yaml_file(config_path.absolute())
     
-    language = args.language
+    language = config_data.get('lang')
     assert(language in LANGUAGES)
     
-    if not args.add_generated and not args.add_translated:
-        print("[ERROR] there are no addition data for new dataset")
+    files_list = config_data.get('files')
+    if files_list is None or len(files_list) == 0:
+        print('[ERROR] there are no files for compilation')
         return
-
-    root_data_path = Path(args.data_path)
-    assert(root_data_path.exists())
     
-    result_file_path = Path(f'{root_data_path.absolute()}/{SAVE_NEW_DATASET_DIR_TEMPLATE}/new_dataset.csv')
+    #! Есть идея перегрузить название файла, напрмер, временной меткой. Вопрос, насколько это будет полезно и актуально
+    result_file_path = Path(f'{root_dir}/data/{SAVE_NEW_DATASET_DIR_TEMPLATE}/compiled_dataset_{language}.csv')
     if not result_file_path.parent.exists():
         os.mkdir(result_file_path.parent.absolute())
-    
-    generations_path = None
-    translations_path = None
-    
-    if args.add_generated:
-        generations_path = Path(f'{root_data_path.absolute()}/{SAVE_GENERATIONS_PATH_TEMPLATE}')
-
-    if args.add_translated:
-        translations_path = Path(f'{root_data_path.absolute()}/{SAVE_TRANSLATED_DIR_TEMPLATE}')
-       
+            
     # Потому что исходный датасет объединяется всегда 
     n_dataframes = 1
-        
-    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    #! Пока что здесь не учитываетс вариативность языков. Делаем все вручную
-    #TODO: задача: чтобы скрипт был универсален для всех языков (сейчас парааметр language бесполезен -- исправить)
-    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if generations_path is not None:
-        generation_data_files = os.listdir(generations_path.absolute())
-        
-        for file_name in generation_data_files:
-            file_path = Path(f'{generations_path.absolute()}/{file_name}')
-            '''
-            Чистаем из файла чанками; если файл большой, это
-            поможет избежать переполнения памяти.
-            '''
-            for chunk in pd.read_csv(file_path.absolute(), chunksize=CHUNK_SIZE, lineterminator='\n'):
-                chunk.to_csv(result_file_path, mode='a', header=not os.path.exists(result_file_path), index=False)
-            n_dataframes += 1
+
+    for file in files_list:
+        file_path = Path(file)
+        if not file_path.exists():
+            print(f"[ERROR] file {file_path.absolute()} is not exist")
+            continue
             
-    if translations_path is not None:
-        translation_data_files = os.listdir(translations_path.absolute())
+        for chunk in pd.read_csv(file_path.absolute(), chunksize=CHUNK_SIZE, lineterminator='\n'):
+            chunk.to_csv(result_file_path, mode='a', header=not os.path.exists(result_file_path), index=False)
+        n_dataframes += 1
         
-        for file_name in translation_data_files:
-            file_path = Path(f'{translations_path.absolute()}/{file_name}')
-            '''
-            Чистаем из файла чанками; если файл большой, это
-            поможет избежать переполнения памяти.
-            '''
-            for chunk in pd.read_csv(file_path.absolute(), chunksize=CHUNK_SIZE, lineterminator='\n'):
-                chunk.to_csv(result_file_path, mode='a', header=not os.path.exists(result_file_path), index=False)
-            n_dataframes += 1
-                
-    source_train_data_file = Path(f"{root_data_path.absolute()}/{source_data_files[language]}")
+    # Прибавляем к объедененному датасету данные исходного датасета            
+    source_train_data_file = Path(f"{root_dir.absolute()}/data/{source_data_files[language]}")
+    assert(source_train_data_file.exists())
     for chunk in pd.read_csv(source_train_data_file.absolute(), chunksize=CHUNK_SIZE, lineterminator='\n'):
         chunk.to_csv(result_file_path, mode='a', header=not os.path.exists(result_file_path), index=False)
             

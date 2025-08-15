@@ -38,7 +38,7 @@ def fix_random_seed(seed=20):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = False
     
-def get_train_eval_dataset(use_generation=False, get_class_weight_flag=False):
+def get_train_eval_dataset(get_class_weight_flag=False):
     '''
     Можно было бы сначала формировать датасет, а потом только делить его на 
     train и test. Но тут задумка в том, что в части для валидации нет сгенерированных данных.
@@ -50,12 +50,6 @@ def get_train_eval_dataset(use_generation=False, get_class_weight_flag=False):
     train_df, val_df = train_test_split(df, test_size=0.2, random_state=20)
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
-    
-    if use_generation:
-        generated_df = pd.read_csv(generated_csv_file)
-        generated_df = generated_df.rename(columns={'Question': 'text'})
-
-        train_df = pd.concat([train_df, generated_df], ignore_index=True)
     
     train_dataset = Dataset.from_pandas(train_df)
     val_dataset = Dataset.from_pandas(val_df)

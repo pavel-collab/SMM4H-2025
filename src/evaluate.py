@@ -36,8 +36,7 @@ model = AutoModelForSequenceClassification.from_pretrained(model_file_path.absol
 device = get_device()
 model.to(device)
 
-_, val_dataset = get_train_eval_dataset(use_generation=False,
-                            get_class_weight_flag=False)
+_, val_dataset = get_train_eval_dataset(get_class_weight_flag=False)
 
 # Токенизация данных
 def tokenize_function(examples):
