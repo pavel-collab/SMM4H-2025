@@ -6,8 +6,14 @@ results
 logs
 __pycache__
 debug.txt
-saved_models
 unsloth_compiled_cache
 .unsloth_classification_venv
+evaluation_report.csv
 tmp
 evaluation_report.csv
+train_updated.csv
+lora_model
+outputs
+submission.csv
+saved_models
+.unsloth_classification_venv

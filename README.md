@@ -87,4 +87,27 @@ python3 ./src/data_preprocessing/make_dataset.py -d ./data/new_datasets/new_data
 python3 ./src/generation/unsloth_generator_train.py -d ./data
 
 python3 ./src/generation/unlsoth_generator_inference.py -d ./data -n 450
+После обучения в каталоге results будут сохранены натренированные чекпоинты моделей, а в каталоге logs -- информация об обучении,
+которую можно визуализировать через tensorboard.
+
+Визуализация логов через tensorboard
+```
+tensorboard --logdir=./logs
+```
+
+Анализ результатов классификации
+```
+python3 ./src/analyze_results.py
+```
+
+## Обучение через биюлиотеку unsloth
+
+Тренировка классификатора
+```
+python3 ./src/unsloth_classificator_train.py -d ./data/en_train_data_SMM4H_2025_clean.csv
+```
+
+Валидация обученного классификатора
+```
+python3 ./src/unsloth_classificator_inference.py -d ./data/en_train_data_SMM4H_2025_clean.csv
 ```

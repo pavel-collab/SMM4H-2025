@@ -44,7 +44,8 @@ def get_train_eval_dataset(get_class_weight_flag=False):
     train и test. Но тут задумка в том, что в части для валидации нет сгенерированных данных.
     '''
     df = pd.read_csv(train_csv_file)
-    
+
+    #! Препроцессинг текста    
     # df['text'] = df['text'].apply(preprocess_text)
 
     train_df, val_df = train_test_split(df, test_size=0.2, random_state=20)
@@ -70,6 +71,14 @@ def get_device():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     return device
 
+def get_metrics(preds, true_lables):
+    cm = confusion_matrix(true_lables, preds)
+    report = classification_report(true_lables, preds, output_dict=True)
+    accuracy = np.sum(np.diag(cm)) / np.sum(cm)
+    # Вычисление взвешенной F1-меры для текущей модели
+    micro_f1 = f1_score(true_lables, preds, average='micro')
+    return cm, report, accuracy, micro_f1
+
 def evaleate_model(model, trainer, tokenized_val_dataset, device):
     model.to(device)
     model.eval()
@@ -83,12 +92,8 @@ def evaleate_model(model, trainer, tokenized_val_dataset, device):
     
     preds = np.argmax(target_predictions, axis=-1)
     true_lables = tokenized_val_dataset['label']
-    cm = confusion_matrix(true_lables, preds)
-    report = classification_report(true_lables, preds)
-    accuracy = np.sum(np.diag(cm)) / np.sum(cm)
-    # Вычисление взвешенной F1-меры для текущей модели
-    micro_f1 = f1_score(true_lables, preds, average='micro')
-    return cm, report, accuracy, micro_f1
+    
+    return get_metrics(preds, true_lables)
 
 def plot_confusion_matrix(cm, classes, model_name=None, save_file_path=None):
     with plt.style.context('default'):  
@@ -122,3 +127,56 @@ def get_class_weights(train_df):
     class_weights = (sum(train_class_counts.tolist()) / (n_classes * train_class_counts)).tolist()
     class_weights = torch.tensor(class_weights)
     return class_weights
+
+'''
+Функция принимает словарь metics, в его составе обязательно должны быть 
+accuracy, micro_f1 и выход функции classification_report пакета sklearn.
+Причем выход функции classification_report должен представлять собой словарь, так что,
+убедитесь, что в месте вызова функции classification_report установлен параметр output_dict=True
+'''
+def dump_classification_metrics(model_name, metrics, csv_file=None, use_generation=False):
+    assert('accuracy' in metrics.keys())
+    assert('micro_f1' in metrics.keys())
+    assert('classification_report' in metrics.keys())
+    
+    assert(csv_file is not None)
+    
+    classification_rep = metrics['classification_report']
+    
+    new_row = {
+        'model_name':        [model_name],
+        'accuracy':          [metrics['accuracy']],
+        'micro_f1':          [metrics['micro_f1']],
+        'label_0_precision': [classification_rep['0']['precision']],
+        'label_0_recall':    [classification_rep['0']['recall']],
+        'label_0_f1':        [classification_rep['0']['f1-score']],
+        'label_1_precision': [classification_rep['1']['precision']],
+        'label_1_recall':    [classification_rep['1']['recall']],
+        'label_1_f1':        [classification_rep['1']['f1-score']],
+        'use_generation':    [int(use_generation)]
+    }
+    
+    new_row_df = pd.DataFrame(new_row)
+    
+    try:
+        existing_df = pd.read_csv(csv_file)
+        new_row_df.to_csv(csv_file, mode='a', index=False, header=False)
+    except FileNotFoundError:
+        # Если файла нет, создаем его с заголовками
+        new_row_df.to_csv(csv_file, index=False, header=True)
+
+'''
+На вход ожидается pandas dataframe
+'''
+def overload_dataset_by_instruction(df):
+    #TODO: need to refactor
+    # Set a label mapping for construct a training prompt
+    label_map = {
+        0: "without Adverse Drug Events",
+        1: "with Adverse Drug Events"
+    }
+    
+    df["instruction"] = "Classify this example into two topics: with Adverse Drug Events and without Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug"
+    df["label"] = df["label"].map(label_map)
+    df = df.rename(columns={"label": "output", "text": "input"})
+    return df
