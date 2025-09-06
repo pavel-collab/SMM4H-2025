@@ -8,3 +8,5 @@ results
 tmp
 unsloth_compiled_cache
 evaluation_report.csv
+saved_models
+.unsloth_classification_venv
