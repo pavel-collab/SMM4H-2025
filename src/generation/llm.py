@@ -1,6 +1,9 @@
 from typing import List
 from google import generativeai as genai
 import openai
+import argparse
+from dotenv import load_dotenv
+import os
 
 # ------------------------------
 # OpenAI
@@ -9,8 +12,8 @@ class OpenAIClient:
     def __init__(self, api_key: str):
         openai.api_key = api_key
 
-    def suggest(self, history: List[str], limit: int = 5) -> List[str]:
-        prompt = self._build_prompt(history, limit)
+    def suggest(self, limit: int = 5) -> List[str]:
+        prompt = self._build_prompt(limit)
         response = openai.ChatCompletion.create(
             model="gpt-4o",
             messages=[
@@ -22,7 +25,7 @@ class OpenAIClient:
         result = response.choices[0].message["content"]
         return self._parse_output(result, limit)
 
-    def _build_prompt(self, history: List[str], limit: int) -> str:
+    def _build_prompt(self, limit: int) -> str:
         return f"""Generate one tweet with Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug.
 Don't use images, don't use emojies."""
 
@@ -39,7 +42,7 @@ class GeminiClient:
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model_name="gemini-2.0-flash")
 
-    def suggest(self, history: list[str], num_suggestions: int = 5) -> list[str]:
+    def suggest(self, num_suggestions: int = 5) -> list[str]:
         """
         Analyzes command history and suggests commands using Gemini.
 
@@ -50,11 +53,6 @@ class GeminiClient:
         Returns:
             A list of suggested command strings.
         """
-        if not history:
-            return []
-
-        joined_history = "\n".join(history)
-
         # --- 프롬프트 수정 ---
         # {limit} 대신 명시적으로 num_suggestions 변수 사용
         prompt = f"""Generate one tweet with Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug.
@@ -90,4 +88,37 @@ def get_llm(provider: str, api_key: str):
     else:
         raise NotImplementedError(f"지원하지 않는 provider입니다: {provider}")
     
+def load_api_key(provider: str) -> str:
+    load_dotenv()
+    """
+    선택한 provider에 맞는 API 키를 환경변수에서 불러옵니다.
+    """
+    if provider == "openai":
+        key = os.getenv("OPENAI_TOKEN")
+    elif provider == "gemini":
+        key = os.getenv("GEMINI_TOKEN")
+    else:
+        raise ValueError(f"지원하지 않는 provider입니다: {provider}")
+
+    if not key:
+        raise EnvironmentError(f"{provider.upper()} API 키가 설정되어 있지 않습니다.")
+    return key
     
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--provider', type=str, default='openai', help='set a type of LLM provider, available: [openai], [gemini]')
+    args = parser.parse_args()
+    
+    api_key = load_api_key(provider)
+    
+    provider = args.provider
+    llm = get_llm(provider=provider, api_key=api_key)
+    
+    suggestions = llm.suggest()
+    
+    if suggestions:
+        for id, answer in enumerate(suggestions):
+            print(f"LLM answer [{id}] is:\n\t{answer}\n")
+    
+if __name__ == '__main__':
+    main()
