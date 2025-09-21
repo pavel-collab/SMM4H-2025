@@ -24,16 +24,13 @@ model_name = 'distiluse-base-multilingual-cased-v1'
 # В этом массиве у нас будут целевые предложения для исследования
 # Они будут сравниваться с предложениями из исходного датасета и высчитываться метрика похожести
 TARGET_SAMPLES = [
-    "Incidence and risk of denosumab-related hypocalcemia in cancer patients: a systematic review and pooled analys...",
-    "I'm gonna take Cymbalta just for the side effects.",
-    "I actually watched that newscast about breast cancer &amp; chemo. apparently early to mid-stage cancer patients may not need chemo. Just estrogen therapy,and the usual removal procedure.",
-    "seroquel. please. ""drake is the man of my dreams""",
-    "Asthma is the talk on Froome. My diagnosis is COPD and he was taking Advair mid-stage.",
-    "Anyone notice that Xarelto commercials are almost identical to Viagra commercials? I just like commercials with sexy older men.",
-    "Reduces heart attacks and do not increase any stroke or clotting. So overall,estrogen-only hormone replacement therapy is very protective from breast cancer. It is safe than originally reported and much more safe than people perceive",
-    "It's Viibryd. I can't afford it so I get samples from my psych and we had to bump my appt.",
-    "Mom texted ""Mark in HollyWood"" ... I still have it in the air Who Ya Got?",
-    "SSRI Birth Injury Drugs:  Celexa, Effexor, Lexapro, Paxil, Prozac, and Zoloft. Call now to speak with an attorney.",
+    'banana? hot milk? and randomly lettuce! all contain sleepy bye chems. all i have is trazodone which means dopey all day tomo',
+    "how anyone can say there is no withdrawal from prozac withdrawal is beyond me.  their answer is to go back on it and up the dose.",
+    "so i took 2 vyvanse this morning..i think i'm about to have a heart attack?????",
+    "i need to start taking my viibryd again but it makes me feel so nauseous ughhh",
+    "Venlafaxine gave me horrendous nightmares, & coming of it was horrific.!",
+    "last night i was a mermaid and then a wizard who had to save the world while being hunted by the japanese... err thank you #trazodone ?",
+    "my medication gives me weird &amp; bizarre dreams. not all bad though. last night i had dinner with the rolling st"
 ]
 
 num_samples = len(TARGET_SAMPLES)
