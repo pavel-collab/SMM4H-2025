@@ -24,7 +24,16 @@ model_name = 'distiluse-base-multilingual-cased-v1'
 # В этом массиве у нас будут целевые предложения для исследования
 # Они будут сравниваться с предложениями из исходного датасета и высчитываться метрика похожести
 TARGET_SAMPLES = [
-    'banana? hot milk? and randomly lettuce! all contain sleepy bye chems. all i have is trazodone which means dopey all day tomo'
+    "Incidence and risk of denosumab-related hypocalcemia in cancer patients: a systematic review and pooled analys...",
+    "I'm gonna take Cymbalta just for the side effects.",
+    "I actually watched that newscast about breast cancer &amp; chemo. apparently early to mid-stage cancer patients may not need chemo. Just estrogen therapy,and the usual removal procedure.",
+    "seroquel. please. ""drake is the man of my dreams""",
+    "Asthma is the talk on Froome. My diagnosis is COPD and he was taking Advair mid-stage.",
+    "Anyone notice that Xarelto commercials are almost identical to Viagra commercials? I just like commercials with sexy older men.",
+    "Reduces heart attacks and do not increase any stroke or clotting. So overall,estrogen-only hormone replacement therapy is very protective from breast cancer. It is safe than originally reported and much more safe than people perceive",
+    "It's Viibryd. I can't afford it so I get samples from my psych and we had to bump my appt.",
+    "Mom texted ""Mark in HollyWood"" ... I still have it in the air Who Ya Got?",
+    "SSRI Birth Injury Drugs:  Celexa, Effexor, Lexapro, Paxil, Prozac, and Zoloft. Call now to speak with an attorney.",
 ]
 
 num_samples = len(TARGET_SAMPLES)
@@ -50,28 +59,27 @@ target_samples_similarity_scorses = []
 for sent in TARGET_SAMPLES:
     sent_similarity_scorses = []
     for raw_sent in texts:
-        cosin_score = get_cosin_similarity(sent, raw_sent, model)
-        sent_similarity_scorses.append(cosin_score)
-    target_samples_similarity_scorses.append(sent_similarity_scorses)
+        cosin_score = float (get_cosin_similarity(sent, raw_sent, model).to("cpu"))
+        sent_similarity_scorses.append(cosin_score) # a vector of similarity scores for one sent from TARGET_SAMPLES (1, texts.size)
+    target_samples_similarity_scorses.append(sent_similarity_scorses) # a matrix of scores (TARGET_SAMPLES.size, texts.size)
 
-num_rows = num_samples // 3
-
-fig, axes = plt.subplots(num_samples, num_rows, figsize=(10, 5 * num_samples))
 
 for i, data in enumerate(target_samples_similarity_scorses):
+    # data is a vector (1, texts.size)
+    
     mean = np.mean(data)
     variance = np.var(data)
     std_dev = np.sqrt(variance)
 
     # Построение барплота
-    sns.histplot(data, bins=20, kde=True, ax=axes[i], color='blue', stat="density")
+    sns.histplot(data, bins=20, kde=True, color='blue', stat="density")
 
     # Описание графика
-    axes[i].axvline(mean, color='red', linestyle='--', label='Среднее')
-    axes[i].axvline(mean + std_dev, color='orange', linestyle='--', label='Среднее + Дисперсия')
-    axes[i].axvline(mean - std_dev, color='orange', linestyle='--', label='Среднее - Дисперсия')
-    axes[i].set_title(f'График для массива {i+1}')
-    axes[i].legend()
+    plt.axvline(mean, color='red', linestyle='--', label='Среднее')
+    plt.axvline(mean + std_dev, color='orange', linestyle='--', label='Среднее + Дисперсия')
+    plt.axvline(mean - std_dev, color='orange', linestyle='--', label='Среднее - Дисперсия')
+    plt.title(f'График для массива {i+1}')
+    plt.legend()
 
-plt.tight_layout()
-plt.show()
+    plt.tight_layout()
+    plt.show()
