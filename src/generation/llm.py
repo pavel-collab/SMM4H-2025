@@ -11,6 +11,7 @@ import pandas as pd
 from ollama_client import OllamaClient
 from open_router_client import OpenRouterClient
 from hugging_face_client import HuggingFaceClient
+from vllm_client import VllmClient
 
 '''
 Before run this script, you need to fill your API keys in .env file.
@@ -92,13 +93,15 @@ def get_llm(provider: str, api_key: str):
         return OpenRouterClient(api_key)
     elif provider == "hugging_face":
         return HuggingFaceClient(api_key)
+    elif provider == "vllm":
+        return VllmClient(api_key=api_key)
     else:
         raise NotImplementedError(f"Set wrong provider: {provider}")
     
 def load_api_key(provider: str) -> str:
     load_dotenv()
 
-    if provider == "openai":
+    if provider == "openai" or provider == "vllm":
         key = os.getenv("OPENAI_TOKEN")
     elif provider == "gemini":
         key = os.getenv("GEMINI_TOKEN")
@@ -117,7 +120,7 @@ def load_api_key(provider: str) -> str:
     
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--provider', type=str, default='openai', help='set a type of LLM provider, available: [openai | gemini | openrouter | ollama | hugging_face]')
+    parser.add_argument('-p', '--provider', type=str, default='openai', help='set a type of LLM provider, available: [openai | gemini | openrouter | ollama | hugging_face | vllm]')
     parser.add_argument('-n', type=int, default=5, help="set number of generations")
     parser.add_argument('-m', '--model', type=str, default='gpt-4o', help='set a name of used model (only for openrouter)')
     args = parser.parse_args()
@@ -126,7 +129,7 @@ def main():
     
     api_key = load_api_key(provider)
     
-    if api_key is None and provider != "ollama":
+    if api_key is None and provider != "ollama" and provider != "vllm":
         raise(Exception())
     
     llm = get_llm(provider=provider, api_key=api_key)
