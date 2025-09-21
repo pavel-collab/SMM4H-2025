@@ -1,10 +1,10 @@
 import argparse
-import openai
-from openai import OpenAI
 import pandas as pd
 from pathlib import Path
 import re
 import json
+
+from google import generativeai as genai
 
 '''
 В этом скрипте мы используем подход llm as judge. То есть мы используем стороннюю модель
@@ -15,17 +15,10 @@ import json
 через API.
 '''
 
-def extract_json(md_text):
-    json_pattern = re.compile(r'``json\s*([\s\S]*?)\s*``', re.MULTILINE)
-    matches = json_pattern.findall(md_text)
-    json_objects = []
-    for match in matches:
-        try:
-            json_objects.append(json.loads(match))
-        except json.JSONDecodeError as e:
-            print(f"Ошибка парсинга JSON: {e}")
-
-    return json_objects
+answer_map = {
+    'yes': 1,
+    'no': 0
+}
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--token', type=str, help='set an openai token')
@@ -41,25 +34,30 @@ assert(data_path.exists())
 synth_data_df = pd.read_csv(data_path.absolute())
 texts = synth_data_df['text'].tolist()
 
-openai.api_key = TOKEN
+genai.configure(api_key=TOKEN)
+model = genai.GenerativeModel(model_name="gemini-2.0-flash")
 
-for text in texts:
-    messages = [
-        {"role": "system",
-        "content": "Ты эксперт по анализу текста. Твоя задача - определить, есть ли в тексте упоминание негативных явлний, связанных с приемом лекарственных препаратов."},
-        {"role": "user", "content": f"""
-        Целевое предложение: {text}
+for text in texts[:10]:
+    messages = f"""You are an expert in text analysis. Your task is to determine if there is any mention of negative phenomena associated with taking medications in the text.
+        Target offer: {text}
         
-        0. Изучи предложение.
-        1. Определи, есть ли в этом предложении упоминания негативных явлний, связанных с приемом лекарственных препаратов.
-        2. Объясни свой выбор одним-двумя предложениями.
+        0. Study the offer.
+        1. Determine if there is any mention of negative phenomena associated with taking medications in this sentence.
+        2. Explain your choice in one or two sentences.
         
-        В конце ответа обзятаельно напиши JSON с оценкой в формате {{"value": "&lt;твоя оценка&gt;", "explnation": "объяснение"}}.
-        """}
-    ]
+        Return your response in a JSON format with the following structure: {{"value": "your estimate", "explanation": "explanation"}}.
+        In the fild 'value' use only yes/no.
+        """
 
-    response = OpenAI().chat.completions.create(model="gpt-4o", messages=messages, temperature=0.2)
-    json_answer = extract_json(response.choices[0].message.content)[0]
+    try:
+        response = model.generate_content(messages)
+        raw_suggestions = response.text.strip()
+        # print(f"[DEBUG] {raw_suggestions}")
+        
+        json_answer = json.loads(raw_suggestions.removesuffix('```').removeprefix('```json'))
 
-    #!  Временная заглушка, здесь надо отладить скрипт хотя бы на этом этапе
-    print(f"[DEBUG] text: {text}\n\tAnswer: {json_answer}")
+        #!  Временная заглушка, здесь надо отладить скрипт хотя бы на этом этапе
+        print(f"[DEBUG] text: {text}\n\tAnswer: {answer_map[json_answer['value']]}")
+    except Exception as ex:
+        print(f"[ERROR] {ex}")
+        print(f"[DEBUG] {raw_suggestions}")
