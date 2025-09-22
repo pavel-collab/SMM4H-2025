@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 from pathlib import Path
 import json
+from sklearn.metrics import classification_report
 
 from ollama_client import OllamaClient
 
@@ -32,10 +33,17 @@ assert(data_path.exists())
 
 synth_data_df = pd.read_csv(data_path.absolute())
 texts = synth_data_df['text'].tolist()
+labels = synth_data_df['label'].tolist()
 
 llm = OllamaClient(server_url='http://localhost:11435')
 
-for text in texts[:10]:
+examples_limit = 10
+llm_predicted_labels = []
+
+tests = texts[:examples_limit]
+labels = labels[:examples_limit]
+
+for text, labels in zip(texts, labels):
     messages = f"""You are an expert in text analysis. Your task is to determine if there is any mention of negative phenomena associated with taking medications in the text.
         Target offer: {text}
         
@@ -53,6 +61,14 @@ for text in texts[:10]:
 
         #!  Временная заглушка, здесь надо отладить скрипт хотя бы на этом этапе
         print(f"[DEBUG] text: {text}\n\tAnswer: {answer_map[llm_json_response['value']]}")
+
+        llm_predicted_labels.append(answer_map[llm_json_response['value']])
     except Exception as ex:
         print(f"[ERROR] {ex}")
         print(f"[DEBUG] {llm_response}")
+
+df = pd.DataFrame({'text': texts, 'true_label': labels, 'predicted_lables': llm_predicted_labels})
+df.to_csv(f'llm_predicted_lables.csv', index=False)
+
+report = classification_report(labels, llm_predicted_labels, output_dict=True)
+print(f"[DEBUG] classification report of the llm judge predicted lables:\n\n{report}")
