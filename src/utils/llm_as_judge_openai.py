@@ -15,6 +15,18 @@ from ollama_client import OllamaClient
 через API.
 '''
 
+#TODO: will be need for future functionality
+def sample_sentences(df: pd.DataFrame, n: int) -> list:
+    """
+    Случайно сэмплирует n предложений из колонки 'text' датафрейма df без повторений.
+
+    :param df: pandas DataFrame с колонками 'text' и 'label'
+    :param n: количество предложений для выборки (неотрицательное число)
+    :return: список из n предложений
+    """
+    sampled = df['text'].sample(n=n, replace=False, random_state=None).tolist()
+    return sampled
+
 answer_map = {
     'yes': 1,
     'no': 0
