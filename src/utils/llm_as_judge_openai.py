@@ -1,10 +1,9 @@
 import argparse
 import pandas as pd
 from pathlib import Path
-import re
 import json
 
-from google import generativeai as genai
+from ollama_client import OllamaClient
 
 '''
 В этом скрипте мы используем подход llm as judge. То есть мы используем стороннюю модель
@@ -34,8 +33,7 @@ assert(data_path.exists())
 synth_data_df = pd.read_csv(data_path.absolute())
 texts = synth_data_df['text'].tolist()
 
-genai.configure(api_key=TOKEN)
-model = genai.GenerativeModel(model_name="gemini-2.0-flash")
+llm = OllamaClient(server_url='http://localhost:11435')
 
 for text in texts[:10]:
     messages = f"""You are an expert in text analysis. Your task is to determine if there is any mention of negative phenomena associated with taking medications in the text.
@@ -50,14 +48,11 @@ for text in texts[:10]:
         """
 
     try:
-        response = model.generate_content(messages)
-        raw_suggestions = response.text.strip()
-        # print(f"[DEBUG] {raw_suggestions}")
-        
-        json_answer = json.loads(raw_suggestions.removesuffix('```').removeprefix('```json'))
+        llm_response = llm_response.removesuffix('```').removeprefix('```json')
+        llm_json_response = json.loads(llm_response)
 
         #!  Временная заглушка, здесь надо отладить скрипт хотя бы на этом этапе
-        print(f"[DEBUG] text: {text}\n\tAnswer: {answer_map[json_answer['value']]}")
+        print(f"[DEBUG] text: {text}\n\tAnswer: {answer_map[llm_json_response['value']]}")
     except Exception as ex:
         print(f"[ERROR] {ex}")
-        print(f"[DEBUG] {raw_suggestions}")
+        print(f"[DEBUG] {llm_response}")
