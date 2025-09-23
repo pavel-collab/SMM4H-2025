@@ -21,7 +21,7 @@ def make_simple_diagram(df):
     ax = sns.barplot(x='model_name', y='label_1_f1', data=df)
 
     # Настраиваем подписи столбцов
-    plt.xticks(rotation=45, ha="right")  # Поворачиваем подписи на 45 градусов и выравниваем по правому краю
+    plt.xticks(rotation=15, ha="right")  # Поворачиваем подписи на 45 градусов и выравниваем по правому краю
 
     # Добавляем подписи осей и заголовок
     plt.xlabel("Модель")
@@ -34,7 +34,7 @@ def make_simple_diagram(df):
 
 def make_compared_diagram_f1(df, save_image=False):
     # Создаем столбчатую диаграмму с группировкой
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 15))
     sns.barplot(
         x='model_name', 
         y='label_1_f1', 
@@ -43,7 +43,7 @@ def make_compared_diagram_f1(df, save_image=False):
         palette={True: 'skyblue', False: 'salmon'}  # Цвета для наглядности
     )
 
-    plt.xticks(rotation=45, ha="right")
+    plt.xticks(rotation=10, ha="right")
     
     plt.title('Сравнение качества моделей: С использованием синтетических данных и без')
     plt.xlabel('Модель')
@@ -60,7 +60,7 @@ def make_compared_diagram_f1(df, save_image=False):
 #! Здесь используется precision именно для метки 1
 def make_compared_diagram_precision(df, save_image=False):
     # Создаем столбчатую диаграмму с группировкой
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 15))
     sns.barplot(
         x='model_name',
         y='label_1_precision',
@@ -69,7 +69,7 @@ def make_compared_diagram_precision(df, save_image=False):
         palette={True: 'skyblue', False: 'salmon'}  # Цвета для наглядности
     )
 
-    plt.xticks(rotation=45, ha="right")
+    plt.xticks(rotation=15, ha="right")
     
     plt.title('Сравнение качества моделей: С использованием синтетических данных и без')
     plt.xlabel('Модель')
@@ -86,7 +86,7 @@ def make_compared_diagram_precision(df, save_image=False):
 #! Здесь используется precision именно для метки 1
 def make_compared_diagram_recall(df, save_image=False):
     # Создаем столбчатую диаграмму с группировкой
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 15))
     sns.barplot(
         x='model_name',
         y='label_1_recall',
@@ -95,7 +95,7 @@ def make_compared_diagram_recall(df, save_image=False):
         palette={True: 'skyblue', False: 'salmon'}  # Цвета для наглядности
     )
 
-    plt.xticks(rotation=45, ha="right")
+    plt.xticks(rotation=15, ha="right")
 
     plt.title('Сравнение качества моделей: С использованием синтетических данных и без')
     plt.xlabel('Модель')
