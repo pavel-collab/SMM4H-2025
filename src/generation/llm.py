@@ -20,7 +20,11 @@ Check .env.example file for more information.
 
 PROMPT = """
 Generate {num_of_examples} variative [TWEET] with Adverse Drug Events. Adverse Drug Events are negative medical side effects associated with a drug.
-Don't use images, don't use emojies. Don't use phrase "Adverse Drug Events" itself.
+Don't use images, don't use emojies. Don't use phrase "Adverse Drug Events" itself. Don't repeat examples.
+Generate answer as a string with json structure:
+"""
+
+STRUCTURE_OUTPUT_PROMPT = """
 Generate answer as a string with json structure:
 {{
     tweets: [
@@ -123,6 +127,7 @@ def main():
     parser.add_argument('-p', '--provider', type=str, default='openai', help='set a type of LLM provider, available: [openai | gemini | openrouter | ollama | hugging_face | vllm]')
     parser.add_argument('-n', type=int, default=5, help="set number of generations")
     parser.add_argument('-m', '--model', type=str, default='gpt-4o', help='set a name of used model (only for openrouter)')
+    parser.add_argument('--few_shot', action='store_true', help='use few shot prompt')
     args = parser.parse_args()
     
     provider = args.provider
@@ -133,10 +138,15 @@ def main():
         raise(Exception())
     
     llm = get_llm(provider=provider, api_key=api_key)
+
+    prompt = PROMPT.format(num_of_examples = args.n)
+    if args.few_shot:
+        prompt = recontext_prompt(prompt)
+    prompt += STRUCTURE_OUTPUT_PROMPT.format()
     
     #TODO: в генерациях Gemini часто маскирует названия лекарств. Возможно стоит обогатить
     #TODO: ее генерацию, например предоставить ей список доступных лекарств или даже использовать RAG
-    llm_response = llm.suggest(PROMPT.format(num_of_examples = args.n))
+    llm_response = llm.suggest(prompt)
     
     print(f"[DEBUG] {llm_response}")
     
@@ -163,3 +173,31 @@ def main():
     
 if __name__ == '__main__':
     main()
+
+def sample_sentences(df: pd.DataFrame, n: int) -> list:
+    """
+    Случайно сэмплирует n предложений из колонки 'text' датафрейма df без повторений.
+
+    :param df: pandas DataFrame с колонками 'text' и 'label'
+    :param n: количество предложений для выборки (неотрицательное число)
+    :return: список из n предложений
+    """
+    sampled = df['text'].sample(n=n, replace=False, random_state=None).tolist()
+    return sampled
+
+def get_recontext_prompt(prompt: str, few_shot_examples: list):
+    few_shot_addition = ""
+    for id, example in enumerate(few_shot_examples):
+        few_shot_examples += f"{id}. {example}\n"
+    new_prompt = prompt + f"""
+Use these examples as guidelines for generating:    
+{few_shot_addition}
+"""
+    return new_prompt
+
+def recontext_prompt(prompt: str, few_shot_examples_filepath="en_positive_samples.csv", n_samples=10):
+    df = pd.read_csv(few_shot_examples_filepath)
+    random_samples = sample_sentences(df, n_samples)
+
+    new_prompt = get_recontext_prompt(prompt, random_samples)
+    return new_prompt
